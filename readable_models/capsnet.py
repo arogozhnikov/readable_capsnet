@@ -33,7 +33,7 @@ class Capsule2Capsule(nn.Module):
         batch, in_caps, out_caps, out_hid = U.shape
 
         # logsoftmax for connections between capsules
-        B = torch.zeros([batch, in_caps, out_caps])
+        B = torch.zeros([batch, in_caps, out_caps], device=U.device)
 
         # routing algorithm
         # names of axes: b=batch, i=input capsules, o=output_capsules, h=hidden dim of output capsule
