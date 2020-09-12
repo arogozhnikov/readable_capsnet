@@ -41,7 +41,7 @@ encoder = RoutingEncoder(
 
 optim = torch.optim.Adam(encoder.parameters())
 train_loader, test_loader = load_mnist(batch_size=64, workers=4)
-device = torch.device('cpu')
+device = torch.device('cuda')
 
 
 def margin_loss(class_capsules, target_one_hot, m_minus=0.1, m_plus=0.9, loss_lambda=0.5):
