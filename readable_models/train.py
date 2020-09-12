@@ -60,7 +60,7 @@ def margin_loss(class_capsules, target_one_hot, m_minus=0.1, m_plus=0.9, loss_la
 for epoch in range(6):
     for i, (images, labels) in enumerate(train_loader):
         digit_capsules = encoder(images.to(device))
-        labels_one_hot = torch.nn.functional.one_hot(labels).to(device)
+        labels_one_hot = torch.nn.functional.one_hot(labels).float().to(device)
         loss = margin_loss(digit_capsules, labels_one_hot).mean()
         loss.backward()
         optim.step()
