@@ -33,15 +33,15 @@ def load_mnist(batch_size, workers=4):
 
 from capsnet import RoutingEncoder, Decoder
 
+device = torch.device('cuda')
 encoder = RoutingEncoder(
     in_h=28, in_w=28, in_c=1,
     n_primary_caps_groups=32, primary_caps_dim=8,
     n_digit_caps=10, digit_caps_dim=16
-)
+).to(device)
 
 optim = torch.optim.Adam(encoder.parameters())
 train_loader, test_loader = load_mnist(batch_size=64, workers=4)
-device = torch.device('cuda')
 
 
 def margin_loss(class_capsules, target_one_hot, m_minus=0.1, m_plus=0.9, loss_lambda=0.5):
@@ -69,7 +69,7 @@ for epoch in range(6):
 
     accuracies = []
     for images, labels in test_loader:
-        digit_capsules = encoder(images.to(device))
+        digit_capsules = encoder(images.to(device)).cpu()
         predicted_labels = digit_capsules.norm(dim=2).argmax(dim=1)
         accuracies += asnumpy(predicted_labels == labels).tolist()
 
