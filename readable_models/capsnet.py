@@ -1,22 +1,16 @@
 import torch
 import torch.nn as nn
-
-from einops import reduce, repeat, rearrange
 from einops.layers.torch import WeightedEinsum, Rearrange
 
 
 def squash(x, dim):
-    """
-    The non-linear activation used in Capsule.
-    It drives the length of a large vector to near 1 and small vector to 0
-    This implement equation 1 from the paper.
-    """
+    """ Non-linear activation, that squashes all vectors to have norm < 1 """
     norm_sq = torch.sum(x ** 2, dim, keepdim=True)
     norm = torch.sqrt(norm_sq)
     return (norm_sq / (1.0 + norm_sq)) * (x / norm)
 
 
-class Capsule2Capsule(nn.Module):
+class CapsuleLayerWithRouting(nn.Module):
     def __init__(self, in_caps, in_hid, out_caps, out_hid, routing_iterations=3):
         super().__init__()
         assert routing_iterations > 0, 'at least one iteration is needed'
@@ -29,7 +23,6 @@ class Capsule2Capsule(nn.Module):
 
     def forward(self, input_capsules):
         U = self.input_caps2U(input_capsules)
-
         batch, in_caps, out_caps, out_hid = U.shape
 
         # logsoftmax for connections between capsules
@@ -38,16 +31,15 @@ class Capsule2Capsule(nn.Module):
         # routing algorithm
         # names of axes: b=batch, i=input capsules, o=output_capsules, h=hidden dim of output capsule
         for _ in range(self.routing_iterations):
-            # "routing softmax" that determines connection between capsules in layers
+            # "routing softmax" determines connection between capsules in layers
             C = torch.softmax(B, dim=-1)
             S = torch.einsum('bio,bioh->boh', C, U)
             V = squash(S, dim=-1)
             B = B + torch.einsum('bioh,boh->bio', U, V)
-        assert torch.norm(V, dim=2).max() <= 1.001
         return V
 
 
-class RoutingEncoder(nn.Module):
+class Encoder(nn.Module):
     def __init__(self, in_h, in_w, in_c,
                  n_primary_caps_groups, primary_caps_dim,
                  n_digit_caps, digit_caps_dim,
@@ -57,17 +49,18 @@ class RoutingEncoder(nn.Module):
             nn.Conv2d(in_c, 256, kernel_size=9),
             nn.ReLU(inplace=True),
             nn.Conv2d(256, n_primary_caps_groups * primary_caps_dim, kernel_size=9, stride=2),
+            # regroup conv output into flat capsules
             Rearrange('b (caps hid) h w -> b (h w caps) hid', caps=n_primary_caps_groups, hid=primary_caps_dim),
         )
-        # figure out correct number of capsules by passing a test image through
-        _, self.n_primary_capsules, _ = self.image2primary_capsules(torch.zeros(1, in_c, in_h, in_w)).shape
-        self.primary2digit_capsules = Capsule2Capsule(
-            in_caps=self.n_primary_capsules, in_hid=primary_caps_dim,
+        # figure out correct number of capsules by passing a test image through, lazy but simple
+        _, n_primary_capsules, _ = self.image2primary_capsules(torch.zeros(1, in_c, in_h, in_w)).shape
+        self.primary2digit_capsules = CapsuleLayerWithRouting(
+            in_caps=n_primary_capsules, in_hid=primary_caps_dim,
             out_caps=n_digit_caps, out_hid=digit_caps_dim,
         )
 
     def forward(self, images):
-        primary_capsules = self.image2primary_capsules(images) * 0.01
+        primary_capsules = self.image2primary_capsules(images) * 0.01  # scaling 0.01 to get norms not too close to 1
         return self.primary2digit_capsules(primary_capsules)
 
 
@@ -84,20 +77,10 @@ def Decoder(n_caps, caps_dim, output_h, output_w, output_channels):
     )
 
 
-
-
-
-
-
-
-
-
-
-
 def test(n_digit_caps=10, digit_caps_dim=11):
     size = 28
     image_channels = 3
-    encoder = RoutingEncoder(
+    encoder = Encoder(
         in_c=image_channels, in_h=size, in_w=size,
         n_primary_caps_groups=image_channels,
         primary_caps_dim=12,
@@ -117,6 +100,8 @@ def test(n_digit_caps=10, digit_caps_dim=11):
     recostructed = decoder(embeddings)
 
     assert recostructed.shape == (batch_size, image_channels, size, size)
+    assert recostructed.min() >= -0.001
+    assert recostructed.min() <= 1.001
     print('ok')
 
 

@@ -31,7 +31,7 @@ def load_mnist(batch_size, workers=4):
     return training_data_loader, testing_data_loader
 
 
-from capsnet import RoutingEncoder, Decoder
+from capsnet import Encoder, Decoder
 
 device = torch.device('cuda')
 encoder = RoutingEncoder(
@@ -54,18 +54,17 @@ def margin_loss(class_capsules, target_one_hot, m_minus=0.1, m_plus=0.9, loss_la
     t_c = target_one_hot
     # Lc is margin loss for each digit of class c
     loss = t_c * loss_sig + loss_lambda * (1.0 - t_c) * loss_bkg
-    return reduce(loss, 'b c -> b', 'sum')
+    return reduce(loss, 'b cls -> b', 'sum')
 
 
 for epoch in range(6):
     for i, (images, labels) in enumerate(train_loader):
         digit_capsules = encoder(images.to(device))
-        labels_one_hot = torch.nn.functional.one_hot(labels).float().to(device)
+        labels_one_hot = torch.nn.functional.one_hot(labels, num_classes=10).float().to(device)
         loss = margin_loss(digit_capsules, labels_one_hot).mean()
         loss.backward()
         optim.step()
         optim.zero_grad()
-        print(epoch, i, loss.item())
 
     accuracies = []
     for images, labels in test_loader:
