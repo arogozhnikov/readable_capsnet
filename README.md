@@ -6,6 +6,14 @@ Research-friendly implementation of capsule networks from [Dynamic Routing Betwe
 in pytorch.
 
 
+### Hinton explaining CapsNets
+
+<a href='https://www.youtube.com/watch?v=x5Vxk9twXlE'>
+<img src='http://arogozhnikov.github.io/images/etc/hinton_explains_capsnets.png' width=500 />
+</a>
+
+Video of lecture: <https://www.youtube.com/watch?v=x5Vxk9twXlE>
+
 ### Project origins:
 
 @michaelklachko [suggested](https://github.com/arogozhnikov/einops/issues/53)
