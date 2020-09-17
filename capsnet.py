@@ -28,7 +28,7 @@ class CapsuleLayerWithRouting(nn.Module):
         # logsoftmax for connections between capsules
         B = torch.zeros([batch, in_caps, out_caps], device=U.device)
 
-        # routing algorithm
+        # routing algorithm (procedure 1 from paper)
         # names of axes: b=batch, i=input capsules, o=output_capsules, h=hidden dim of output capsule
         for _ in range(self.routing_iterations):
             # "routing softmax" determines connection between capsules in layers
@@ -75,34 +75,3 @@ def Decoder(n_caps, caps_dim, output_h, output_w, output_channels):
                        hidden=1024, h=output_h, w=output_w, c=output_channels),
         nn.Sigmoid(),
     )
-
-
-def test(n_digit_caps=10, digit_caps_dim=11):
-    size = 28
-    image_channels = 3
-    encoder = Encoder(
-        in_c=image_channels, in_h=size, in_w=size,
-        n_primary_caps_groups=image_channels,
-        primary_caps_dim=12,
-        n_digit_caps=n_digit_caps,
-        digit_caps_dim=digit_caps_dim,
-    )
-
-    batch_size = 2
-    images = torch.zeros(batch_size, image_channels, size, size)
-
-    embeddings = encoder(images)
-
-    assert embeddings.shape == (batch_size, n_digit_caps, digit_caps_dim)
-
-    decoder = Decoder(n_digit_caps, caps_dim=digit_caps_dim, output_h=size, output_w=size,
-                      output_channels=image_channels)
-    recostructed = decoder(embeddings)
-
-    assert recostructed.shape == (batch_size, image_channels, size, size)
-    assert recostructed.min() >= -0.001
-    assert recostructed.min() <= 1.001
-    print('ok')
-
-
-test()
