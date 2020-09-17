@@ -63,7 +63,7 @@ for epoch in range(100):
         labels_one_hot = torch.nn.functional.one_hot(labels, num_classes=10).float().to(device)
         loss = margin_loss(digit_capsules, labels_one_hot).mean()
         reconstructed = decoder(digit_capsules * rearrange(labels_one_hot, 'b caps -> b caps 1'))
-        reconstruction_loss_mse = (images - reconstructed).pow(2).mean()
+        reconstruction_loss_mse = (images.to(device) - reconstructed).pow(2).mean()
         loss += reconstruction_loss_mse * 10.  # pick a weight
         loss.backward()
         optimizer.step()
