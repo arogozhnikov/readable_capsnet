@@ -11,17 +11,15 @@ def squash(x, dim):
 
 
 class CapsuleLayerWithRouting(nn.Module):
-    def __init__(self, in_caps, in_hid, out_caps, out_hid, routing_iterations=3):
+    def __init__(self, in_caps, in_hid, out_caps, out_hid):
         super().__init__()
-        assert routing_iterations > 0, 'at least one iteration is needed'
-        self.routing_iterations = routing_iterations
         self.input_caps2U = WeightedEinsum(
             'b in_caps in_hid -> b in_caps out_caps out_hid',
             weight_shape='in_caps in_hid out_caps out_hid',
             in_hid=in_hid, in_caps=in_caps, out_hid=out_hid, out_caps=out_caps,
         )
 
-    def forward(self, input_capsules):
+    def forward(self, input_capsules, routing_iterations):
         U = self.input_caps2U(input_capsules)
         batch, in_caps, out_caps, out_hid = U.shape
 
@@ -30,7 +28,7 @@ class CapsuleLayerWithRouting(nn.Module):
 
         # routing algorithm (procedure 1 from paper)
         # names of axes: b=batch, i=input capsules, o=output_capsules, h=hidden dim of output capsule
-        for _ in range(self.routing_iterations):
+        for _ in range(routing_iterations):
             # "routing softmax" determines connection between capsules in layers
             C = torch.softmax(B, dim=-1)
             S = torch.einsum('bio,bioh->boh', C, U)
@@ -59,9 +57,9 @@ class Encoder(nn.Module):
             out_caps=n_digit_caps, out_hid=digit_caps_dim,
         )
 
-    def forward(self, images):
+    def forward(self, images, routing_iterations=3):
         primary_capsules = self.image2primary_capsules(images) * 0.01  # scaling 0.01 to get norms not too close to 1
-        return self.primary2digit_capsules(primary_capsules)
+        return self.primary2digit_capsules(primary_capsules, routing_iterations)
 
 
 def Decoder(n_caps, caps_dim, output_h, output_w, output_channels):
