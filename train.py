@@ -1,31 +1,26 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms, datasets
-from einops import reduce, asnumpy
+from einops import rearrange, reduce, asnumpy
 import numpy as np
 from capsnet import Encoder, Decoder
 
 
 def load_mnist(batch_size, workers=4):
     train_transform = transforms.Compose([
+        # small random shifts
+        transforms.RandomAffine(degrees=(0, 0), translate=(0.1, 0.1), fillcolor=0),
         transforms.ToTensor(),
-        # RandomAffine fails, maybe worth adding a lambda here to cover random shifts
-        # transforms.RandomAffine(degrees=(0, 0), translate=(0.1, 0.1), fillcolor=0),
-        transforms.Normalize((0.1307,), (0.3081,))
     ])
-    test_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,))
-    ])
-    kwargs = dict(num_workers=workers, pin_memory=True)
+    test_transform = transforms.ToTensor()
 
     training_data_loader = DataLoader(
         datasets.MNIST('./data', train=True, download=True, transform=train_transform),
-        batch_size=batch_size, shuffle=True, **kwargs)
+        batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
 
     testing_data_loader = DataLoader(
         datasets.MNIST('./data', train=False, download=True, transform=test_transform),
-        batch_size=batch_size, shuffle=True, **kwargs)
+        batch_size=batch_size, shuffle=True, num_workers=workers, pin_memory=True)
 
     image_shape = (28, 28, 1)
     n_classes = 10
@@ -67,8 +62,9 @@ for epoch in range(100):
         digit_capsules = encoder(images.to(device))
         labels_one_hot = torch.nn.functional.one_hot(labels, num_classes=10).float().to(device)
         loss = margin_loss(digit_capsules, labels_one_hot).mean()
-        reconstructed = decoder(digit_capsules * labels_one_hot)
-        loss += torch.norm(images - reconstructed)
+        reconstructed = decoder(digit_capsules * rearrange(labels_one_hot, 'b caps -> b caps 1'))
+        reconstruction_loss_mse = (images - reconstructed).pow(2).mean()
+        loss += reconstruction_loss_mse * 10.  # pick a weight
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
