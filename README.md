@@ -6,7 +6,7 @@ Research-friendly implementation of capsule networks from [Dynamic Routing Betwe
 in pytorch.
 
 
-### Hinton explaining CapsNets
+### Intuition behind CapsNets
 
 <a href='https://www.youtube.com/watch?v=x5Vxk9twXlE'>
 <img src='http://arogozhnikov.github.io/images/etc/hinton_explains_capsnets.png' width=500 />
