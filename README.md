@@ -11,7 +11,7 @@ in pytorch.
 
 Capsules are groups of neurons each describing an entity with positional characteristics. 
 
-Capsules are meant to form a 'soft parrsing tree' for a scene.
+Capsules are meant to form a 'soft parsing tree' for a scene with strength of confidence encoded by norm of capsule's activations.
 
 
 ### Intuition behind CapsNets
