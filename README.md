@@ -55,7 +55,7 @@ and, well, I didn't even use `torch.script` and did not use `fp16`, which will p
 Two most important changes that made this possible are:
 
 - all convolutional capsules are packed into one fat convolution instead of splitting into several convolutions and then reshaping and concatenating, 
-  `einops` takes care of making that efficiently. Additionally `einops` takes resolves management.
-- ugly routing implementation made efficient - all split/concat and specially repeats are eliminated by proper usage of `einsum` and `einops`
+  `einops` takes care of making that efficiently. Additionally `einops` resolves weight management for capsules.
+- ugly routing implementation made efficient - all split/concat and all unnecessary repeats are eliminated by proper usage of `einsum` and `einops`
 
 
