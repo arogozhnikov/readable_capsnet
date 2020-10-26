@@ -33,7 +33,7 @@ Video of lecture: <https://www.youtube.com/watch?v=x5Vxk9twXlE>
 - **blazingly fast:** <br /> 
   15 sec/epoch vs 747 sec/epoch on single V100 vs other [implementation](https://github.com/cedrickchee/capsule-net-pytorch)
 
-and, well, I didn't even use `torch.script` and did not use `fp16`, which will provide an additional boost in efficiency.
+and, well, I didn't even use `torch.jit.trace` and did not use `fp16`, which will provide an additional boost in efficiency.
 
 
 Two most important changes that made this possible are:
