@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from einops.layers.torch import WeightedEinsum, Rearrange
+from einops.layers.torch import EinMix as Mix, Rearrange
 
 
 def squash(x, dim):
@@ -13,7 +13,7 @@ def squash(x, dim):
 class CapsuleLayerWithRouting(nn.Module):
     def __init__(self, in_caps, in_hid, out_caps, out_hid):
         super().__init__()
-        self.input_caps2U = WeightedEinsum(
+        self.input_caps2U = Mix(
             'b in_caps in_hid -> b in_caps out_caps out_hid',
             weight_shape='in_caps in_hid out_caps out_hid',
             in_hid=in_hid, in_caps=in_caps, out_hid=out_hid, out_caps=out_caps,
@@ -64,12 +64,10 @@ class Encoder(nn.Module):
 
 def Decoder(n_caps, caps_dim, output_h, output_w, output_channels):
     return nn.Sequential(
-        WeightedEinsum('b caps caps_dim -> b hidden', weight_shape='caps caps_dim hidden',
-                       caps=n_caps, caps_dim=caps_dim, hidden=512),
+        Mix('b caps caps_dim -> b hidden', weight_shape='caps caps_dim hidden', caps=n_caps, caps_dim=caps_dim, hidden=512),
         nn.ReLU(inplace=True),
         nn.Linear(512, 1024),
         nn.ReLU(inplace=True),
-        WeightedEinsum('b hidden -> b c h w', weight_shape='hidden c h w',
-                       hidden=1024, h=output_h, w=output_w, c=output_channels),
+        Mix('b hidden -> b c h w', weight_shape='hidden c h w', hidden=1024, h=output_h, w=output_w, c=output_channels),
         nn.Sigmoid(),
     )
